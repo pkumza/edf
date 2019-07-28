@@ -99,6 +99,7 @@ func NewEDF(entries []*Entry) *EDF {
 	}
 
 	// put entries into priority queue
+	// TODO(maziang): use O(N) heap.Init instead of O(NlogN) Add.
 	for _, entry := range entries {
 		edf.Add(entry)
 	}
