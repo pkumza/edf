@@ -64,6 +64,14 @@ func (e *EDF) Add(entry *Entry) {
 	heap.Push(e.pq, entry)
 }
 
+// AddRaw add a new entry for load balance without sort
+func (e *EDF) AddRaw(entry *Entry) {
+	entry.deadline = e.curDDL + 1/entry.Weight
+	e.curIndex++
+	entry.index = e.curIndex
+	*e.pq = append(*e.pq, entry)
+}
+
 // Delete an entry
 func (e *EDF) Delete(entry *Entry) {
 	entry.Weight = -1
@@ -102,8 +110,9 @@ func NewEDF(entries []*Entry) *EDF {
 	// put entries into priority queue
 	// TODO(maziang): use O(N) heap.Init instead of O(NlogN) Add.
 	for _, entry := range entries {
-		edf.Add(entry)
+		edf.AddRaw(entry)
 	}
+	heap.Init(edf.pq)
 
 	// avoid instance flood pressure for the first entry
 	// start from a random one via pick random times
