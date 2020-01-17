@@ -2,8 +2,13 @@ package edf
 
 import (
 	"container/heap"
+	"math"
 	"math/rand"
 	"time"
+)
+
+const (
+	maxOffset = 1024 // to avoid biasing towards earlier hosts in the schedule
 )
 
 // Entry is an item for load balance
@@ -108,17 +113,29 @@ func NewEDF(entries []*Entry) *EDF {
 	}
 
 	// put entries into priority queue
-	// TODO(maziang): use O(N) heap.Init instead of O(NlogN) Add.
+	sumWeight, minWeight := 0.0, math.MaxFloat64
 	for _, entry := range entries {
 		edf.AddRaw(entry)
+
+		sumWeight += entry.Weight
+		if entry.Weight < minWeight {
+			minWeight = entry.Weight
+		}
 	}
 	heap.Init(edf.pq)
 
 	// avoid instance flood pressure for the first entry
 	// start from a random one via pick random times
 	rand.Seed(time.Now().UnixNano())
-	randomPick := rand.Intn(len(entries))
-	for i := 0; i < randomPick; i++ {
+	offsetRange := int(sumWeight / minWeight)
+	if offsetRange > maxOffset {
+		offsetRange = maxOffset
+	}
+	if offsetRange < len(entries) {
+		offsetRange = len(entries)
+	}
+	offsetPick := rand.Intn(offsetRange)
+	for i := 0; i < offsetPick; i++ {
 		edf.Pick()
 	}
 	return edf
