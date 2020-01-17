@@ -3,6 +3,7 @@ package edf
 import (
 	"container/heap"
 	"math/rand"
+	"time"
 )
 
 // Entry is an item for load balance
@@ -106,6 +107,7 @@ func NewEDF(entries []*Entry) *EDF {
 
 	// avoid instance flood pressure for the first entry
 	// start from a random one via pick random times
+	rand.Seed(time.Now().UnixNano())
 	randomPick := rand.Intn(len(entries))
 	for i := 0; i < randomPick; i++ {
 		edf.Pick()
