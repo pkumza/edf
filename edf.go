@@ -2,6 +2,7 @@ package edf
 
 import (
 	"container/heap"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -54,6 +55,7 @@ type EDF struct {
 	pq       *priorityQueue
 	curIndex int64
 	curDDL   float64
+	baseDDL  float64
 }
 
 // Add a new entry for load balance
@@ -67,6 +69,9 @@ func (e *EDF) Add(entry *Entry) {
 // AddRaw add a new entry for load balance without sort
 func (e *EDF) AddRaw(entry *Entry) {
 	entry.deadline = e.curDDL + 1/entry.Weight
+	if entry.deadline < e.baseDDL {
+		entry.deadline = math.Ceil((e.baseDDL-entry.deadline)*entry.Weight) / entry.Weight
+	}
 	e.curIndex++
 	entry.index = e.curIndex
 	*e.pq = append(*e.pq, entry)
@@ -100,11 +105,13 @@ func (e *EDF) Pick() *Entry {
 
 // NewEDF create a new edf scheduler
 func NewEDF(entries []*Entry) *EDF {
+	rand.Seed(time.Now().UnixNano())
 	// make a new edf
 	priorityQueue := make(priorityQueue, 0)
 	edf := &EDF{
 		pq:       &priorityQueue,
 		curIndex: 0,
+		baseDDL:  rand.Float64(),
 	}
 
 	// put entries into priority queue
@@ -116,7 +123,6 @@ func NewEDF(entries []*Entry) *EDF {
 
 	// avoid instance flood pressure for the first entry
 	// start from a random one via pick random times
-	rand.Seed(time.Now().UnixNano())
 	randomPick := rand.Intn(len(entries))
 	for i := 0; i < randomPick; i++ {
 		edf.Pick()
