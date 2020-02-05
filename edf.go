@@ -2,6 +2,7 @@ package edf
 
 import (
 	"container/heap"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -68,8 +69,8 @@ func (e *EDF) Add(entry *Entry) {
 // AddRaw add a new entry for load balance without sort
 func (e *EDF) AddRaw(entry *Entry) {
 	entry.deadline = e.curDDL + 1/entry.Weight
-	for entry.deadline < e.baseDDL {
-		entry.deadline += 1 / entry.Weight
+	if entry.deadline < e.baseDDL {
+		entry.deadline = math.Ceil((e.baseDDL-entry.deadline)*entry.Weight) / entry.Weight
 	}
 	e.curIndex++
 	entry.index = e.curIndex
@@ -119,5 +120,12 @@ func NewEDF(entries []*Entry) *EDF {
 		edf.AddRaw(entry)
 	}
 	heap.Init(edf.pq)
+
+	// avoid instance flood pressure for the first entry
+	// start from a random one via pick random times
+	randomPick := rand.Intn(len(entries))
+	for i := 0; i < randomPick; i++ {
+		edf.Pick()
+	}
 	return edf
 }
